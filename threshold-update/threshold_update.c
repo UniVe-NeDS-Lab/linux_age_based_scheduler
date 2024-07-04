@@ -11,7 +11,7 @@
 
 struct mnl_socket *nl;
 
-static int data_cb(const struct nlmsghdr *nlh, void *data)
+static int _data_cb(const struct nlmsghdr *nlh, void *data)
 {
 	struct nf_conntrack *ct;
 	uint32_t type = NFCT_T_UNKNOWN;
@@ -38,9 +38,9 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 	const uint64_t *recv_bytes = nfct_get_attr(ct, ATTR_ORIG_COUNTER_BYTES);
 	const uint64_t *sent_bytes = nfct_get_attr(ct, ATTR_REPL_COUNTER_BYTES);
 
-	nfct_snprintf(buf, sizeof(buf), ct,
-			type, NFCT_O_DEFAULT, 0);
-	printf("%s\n", buf);
+	//nfct_snprintf(buf, sizeof(buf), ct,
+	//		type, NFCT_O_DEFAULT, 0);
+	//printf("%s\n", buf);
 
 	if (recv_bytes != NULL || sent_bytes != NULL){
 		*data_int = (int)(*recv_bytes + *sent_bytes);
@@ -53,9 +53,8 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 }
 
 
-/* public interface functions */
 
-int get_bytes(void){
+int _get_bytes(void){
 
 	int ret;
 	char buf[MNL_SOCKET_BUFFER_SIZE];
@@ -67,7 +66,7 @@ int get_bytes(void){
 		exit(EXIT_FAILURE);
 	}
 
-	ret = mnl_cb_run(buf, ret, 0, 0, data_cb, &data);
+	ret = mnl_cb_run(buf, ret, 0, 0, _data_cb, &data);
 	if (ret == -1) {
 		perror("mnl_cb_run");
 		exit(EXIT_FAILURE);
@@ -77,7 +76,7 @@ int get_bytes(void){
 }
 
 
-struct mnl_socket * set_up(void)
+struct mnl_socket * _set_up(void)
 {
 	struct nfct_filter *ft;
 	int fd;
@@ -125,8 +124,51 @@ struct mnl_socket * set_up(void)
 }
 
 
-void tear_down(){
+void _tear_down(){
 	mnl_socket_close(nl);
 }
 
+/* public interface functions */
 
+#ifndef WITHOUT_PYTHON
+
+static PyObject * set_up(PyObject * self, PyObject * args){
+	_set_up();
+	Py_INCREF(Py_None);
+	return Py_None;
+};
+
+static PyObject * tear_down(PyObject * self, PyObject * args){
+	_tear_down();
+	Py_INCREF(Py_None);
+	return Py_None;
+};
+
+static PyObject * get_bytes(PyObject * self, PyObject * args){
+	return PyLong_FromUnsignedLong(_get_bytes());
+};
+
+
+/* Python methods definition */
+
+static PyMethodDef threshold_updateMethods[] = {
+ { "set_up", set_up, METH_VARARGS, "Set up the conntrack filter" },
+ { "tear_down", tear_down, METH_VARARGS, "Tear down the conntrack filter" },
+ { "get_bytes", get_bytes, METH_VARARGS, "Receive updates from the filter" },
+ { NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef thmodule = {
+    PyModuleDef_HEAD_INIT,
+    "threshold_update",   /* name of module */
+    NULL,     /* module documentation, may be NULL */
+    -1,       /* size of per-interpreter state of the module,
+                 or -1 if the module keeps state in global variables. */
+    threshold_updateMethods
+};
+
+PyMODINIT_FUNC PyInit_threshold_update(void)
+{
+    return PyModule_Create(&thmodule);
+}
+#endif

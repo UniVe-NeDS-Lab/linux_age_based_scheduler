@@ -6,9 +6,7 @@
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 
-static int data_cb(const struct nlmsghdr *nlh, void *data);
-int get_bytes(struct mnl_socket *nl, bool debug);
-struct mnl_socket * set_up(bool debug);
-void tear_down(struct mnl_socket * nl);
-
-
+static int _data_cb(const struct nlmsghdr *nlh, void *data);
+int _get_bytes(struct mnl_socket *nl, bool debug);
+struct mnl_socket * _set_up(bool debug);
+void _tear_down(struct mnl_socket * nl);
