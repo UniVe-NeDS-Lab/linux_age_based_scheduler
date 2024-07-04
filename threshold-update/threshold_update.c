@@ -10,6 +10,7 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 {
 	struct nf_conntrack *ct;
 	uint32_t type = NFCT_T_UNKNOWN;
+	uint64_t *data_int = data;
 	char buf[4096];
 	switch(nlh->nlmsg_type & 0xFF) {
 	case IPCTNL_MSG_CT_NEW:
@@ -38,7 +39,7 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 	printf("%s\n", buf);
 
 	if (recv_bytes != NULL || sent_bytes != NULL){
-		printf("==== sent_bytes = %lu, recv_bytes = %lu \n", *recv_bytes, *sent_bytes);
+		*data_int = (int)(*recv_bytes + *sent_bytes);
 	} else {
 		return 0;
 	}
@@ -51,6 +52,7 @@ int main(void)
 {
 	struct mnl_socket *nl;
 	struct nfct_filter *ft;
+	uint64_t data = 0 ;
 	int fd;
 	char buf[MNL_SOCKET_BUFFER_SIZE];
 	int ret;
@@ -101,11 +103,16 @@ int main(void)
 			exit(EXIT_FAILURE);
 		}
 
-		ret = mnl_cb_run(buf, ret, 0, 0, data_cb, NULL);
+		ret = mnl_cb_run(buf, ret, 0, 0, data_cb, &data);
 		if (ret == -1) {
 			perror("mnl_cb_run");
 			exit(EXIT_FAILURE);
 		}
+		if (data != 0){
+			printf("==== total bytes = %lu\n", data);
+			data = 0;
+		}
+	
 	}
 
 	mnl_socket_close(nl);
