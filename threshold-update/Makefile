@@ -3,7 +3,7 @@ GCC=/usr/bin/gcc
 all: updater threshold_update_lib
 
 threshold_update_lib: threshold_update.c
-		  ${GCC} -c threshold_update.c -l mnl -l netfilter_conntrack
+		  ${GCC} -c threshold_update.c -l mnl -l netfilter_conntrack `python3-config --cflags`
 
 updater: threshold_update_lib updater.c
 		  ${GCC} updater.c threshold_update.o -o updater -l mnl -l netfilter_conntrack  

@@ -1,3 +1,6 @@
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -5,6 +8,8 @@
 
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
+struct mnl_socket *nl;
 
 static int data_cb(const struct nlmsghdr *nlh, void *data)
 {
@@ -48,7 +53,9 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 }
 
 
-int get_bytes(struct mnl_socket *nl, bool debug){
+/* public interface functions */
+
+int get_bytes(void){
 
 	int ret;
 	char buf[MNL_SOCKET_BUFFER_SIZE];
@@ -70,9 +77,8 @@ int get_bytes(struct mnl_socket *nl, bool debug){
 }
 
 
-struct mnl_socket * set_up(bool debug)
+struct mnl_socket * set_up(void)
 {
-	struct mnl_socket *nl;
 	struct nfct_filter *ft;
 	int fd;
 
@@ -119,7 +125,7 @@ struct mnl_socket * set_up(bool debug)
 }
 
 
-void tear_down(struct mnl_socket * nl){
+void tear_down(){
 	mnl_socket_close(nl);
 }
 
