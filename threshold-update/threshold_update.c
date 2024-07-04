@@ -128,7 +128,7 @@ void _tear_down(){
 	mnl_socket_close(nl);
 }
 
-/* public interface functions */
+/* public interface for python */
 
 #ifndef WITHOUT_PYTHON
 
@@ -149,7 +149,6 @@ static PyObject * get_bytes(PyObject * self, PyObject * args){
 };
 
 
-/* Python methods definition */
 
 static PyMethodDef threshold_updateMethods[] = {
  { "set_up", set_up, METH_VARARGS, "Set up the conntrack filter" },
