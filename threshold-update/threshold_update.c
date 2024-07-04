@@ -21,7 +21,6 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 		break;
 	case IPCTNL_MSG_CT_DELETE:
 		type = NFCT_T_DESTROY;
-		printf("yeah\n");
 		break;
 	}
 
@@ -48,7 +47,7 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 	return MNL_CB_OK;
 }
 
-int main(void)
+int set_up(bool debug)
 {
 	struct mnl_socket *nl;
 	struct nfct_filter *ft;
@@ -95,7 +94,10 @@ int main(void)
         }
 	*/
 
-	printf("Socket opened, starting to catch events\n");
+	if (debug){
+		printf("Socket opened, starting to catch events\n");
+	}
+
 	while (1) {
 		ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
 		if (ret == -1) {
@@ -109,7 +111,9 @@ int main(void)
 			exit(EXIT_FAILURE);
 		}
 		if (data != 0){
-			printf("==== total bytes = %lu\n", data);
+			if (debug){
+				printf("==== total bytes = %lu\n", data);
+			}
 			data = 0;
 		}
 	
@@ -118,4 +122,8 @@ int main(void)
 	mnl_socket_close(nl);
 
 	return 0;
+}
+
+int main(void){
+	set_up(1);
 }
