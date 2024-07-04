@@ -47,14 +47,34 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 	return MNL_CB_OK;
 }
 
-int set_up(bool debug)
+
+int get_bytes(struct mnl_socket *nl, bool debug){
+
+	int ret;
+	char buf[MNL_SOCKET_BUFFER_SIZE];
+	uint64_t data = 0 ;
+
+	ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
+	if (ret == -1) {
+		perror("mnl_socket_recvfrom");
+		exit(EXIT_FAILURE);
+	}
+
+	ret = mnl_cb_run(buf, ret, 0, 0, data_cb, &data);
+	if (ret == -1) {
+		perror("mnl_cb_run");
+		exit(EXIT_FAILURE);
+	}
+	
+	return data;
+}
+
+
+struct mnl_socket * set_up(bool debug)
 {
 	struct mnl_socket *nl;
 	struct nfct_filter *ft;
-	uint64_t data = 0 ;
 	int fd;
-	char buf[MNL_SOCKET_BUFFER_SIZE];
-	int ret;
 
 	nl = mnl_socket_open(NETLINK_NETFILTER);
 	
@@ -94,36 +114,13 @@ int set_up(bool debug)
         }
 	*/
 
-	if (debug){
-		printf("Socket opened, starting to catch events\n");
-	}
 
-	while (1) {
-		ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
-		if (ret == -1) {
-			perror("mnl_socket_recvfrom");
-			exit(EXIT_FAILURE);
-		}
+	return nl;
+}
 
-		ret = mnl_cb_run(buf, ret, 0, 0, data_cb, &data);
-		if (ret == -1) {
-			perror("mnl_cb_run");
-			exit(EXIT_FAILURE);
-		}
-		if (data != 0){
-			if (debug){
-				printf("==== total bytes = %lu\n", data);
-			}
-			data = 0;
-		}
-	
-	}
 
+void tear_down(struct mnl_socket * nl){
 	mnl_socket_close(nl);
-
-	return 0;
 }
 
-int main(void){
-	set_up(1);
-}
+
