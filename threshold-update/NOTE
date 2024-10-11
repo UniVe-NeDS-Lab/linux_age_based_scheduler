@@ -1,5 +1,0 @@
-gcc nfct-mnl-event.c -o nfct-mnl-event -l mnl -l netfilter_conntrack
-
-sudo sh -c 'echo 1  > /proc/sys/net/netfilter/nf_conntrack_acct'
-
-sudo conntrack -F

@@ -10,9 +10,9 @@ threshold_update_lib: threshold_update.c
 
 updater: threshold_update_lib updater.c
 		  ${GCC} updater.c threshold_update_lib.so -o updater -l mnl -l netfilter_conntrack  
-      
-conntrack_events: conntrack_events.c
-		  ${GCC} conntrack_events.c -o conntrack_events -l mnl -l netfilter_conntrack
+
+conntrack_events: examples/conntrack_events.c
+		  ${GCC} examples/conntrack_events.c -o conntrack_events -l mnl -l netfilter_conntrack
 
 clean:
 	rm *.o *.so conntrack_events updater

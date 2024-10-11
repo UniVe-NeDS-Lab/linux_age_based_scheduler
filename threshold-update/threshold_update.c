@@ -100,7 +100,7 @@ struct mnl_socket * _set_up(void)
                 return 0;
         }
 
-
+    
 	if (mnl_socket_bind(nl, NF_NETLINK_CONNTRACK_DESTROY,
 				MNL_SOCKET_AUTOPID) < 0) {
 		perror("mnl_socket_bind");
