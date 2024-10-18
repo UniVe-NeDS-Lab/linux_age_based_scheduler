@@ -1,5 +1,7 @@
-flush ruleset
-table ip prioritize {
+table inet prioritize {}
+delete table inet prioritize
+
+table inet prioritize {
 	map multiqueue {
 		# types of the data in the map, from bytes measured by conntrack
 		# to priority levels
@@ -8,20 +10,20 @@ table ip prioritize {
 		flags interval
 		# two ranges with a fixed threshold
 		elements = {
-			0-2048 : 8001:6,
+			0-4096 : 8001:6,
 			* : 8001:0,
 		}
 		# pfifo_fast uses the same classification than prio
-		# the first number (8001) is ignored 
+		# the first number (8001) is ignored
 		# the second is mapped as: 6->0, 4->1, 0->1, 2->2
-		# with the priority going lowering from queue 0 to 2 
+		# with the priority going lowering from queue 0 to 2
 	}
 
 	chain y {
-		
+
 		type filter hook output priority 0; policy accept;
-		# set the priority in the metadata of the packet 
-		# based on the data extracted from ct bytes, and mapped in 
+		# set the priority in the metadata of the packet
+		# based on the data extracted from ct bytes, and mapped in
 		# in the map we defined before
 		meta priority set ct bytes map @multiqueue
 	}
