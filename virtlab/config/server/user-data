@@ -1,0 +1,63 @@
+#cloud-config
+
+hostname: server
+
+password: password
+chpasswd:
+  expire: False
+ssh_pwauth: True
+
+package_update: true
+packages:
+  - nftables
+  - conntrack
+  - netcat-traditional
+  - flowgrind
+  - iperf3
+
+write_files:
+  - path: /etc/hosts
+    content: |
+      127.0.0.1    localhost
+      192.168.42.1 client
+      192.168.42.2 server
+  - path: /etc/systemd/system/flowgrindd.service
+    content: |
+      [Unit]
+      Description=Flowgrind Daemon
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/sbin/flowgrindd -d
+      User=root
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+  - path: /etc/systemd/system/iperf3@.service
+    content: |
+      [Unit]
+      Description=iPerf3 Server, Port %i
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/iperf3 -s -p %i
+      User=root
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable nftables.service
+  - systemctl start nftables.service
+  - systemctl enable flowgrindd
+  - systemctl start flowgrindd
+  - systemctl enable iperf3@5201 iperf3@5202
+  - systemctl start iperf3@5201 iperf3@5202
+
+mounts:
+  - [shared, /mnt/shared, "9p", "trans=virtio,version=9p2000.L", "0", "0"]
