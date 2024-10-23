@@ -13,15 +13,15 @@ tc qdisc del root dev ens4 || true
 sleep 1
 
 
-echo "Starting ss"
-ss --oneline --events --info state all dst server > /mnt/shared/logs/iperf-log-$timestamp-def.txt &
-sleep 20
+# echo "Starting ss"
+# ss --oneline --events --info state all dst server > /mnt/shared/logs/ss-log-$timestamp-def.txt &
+# sleep 10
 
 
-echo "Starting iperf3 traffic"
-/mnt/shared/iperf-test.sh
-sleep 20
-killall ss
+echo "Starting iperf2 traffic"
+/mnt/shared/iperf-test.sh | grep  0.0000- > /mnt/shared/logs/iperf-log-$timestamp-def.txt
+# sleep 10
+# killall ss
 
 
 echo "Test finished"
@@ -34,15 +34,15 @@ tc qdisc replace root dev ens4 pfifo_fast
 sleep 1
 
 
-echo "Starting ss"
-ss --oneline --events --info state all dst server > /mnt/shared/logs/iperf-log-$timestamp-age.txt &
-sleep 20
+# echo "Starting ss"
+# ss --oneline --events --info state all dst server > /mnt/shared/logs/ss-log-$timestamp-age.txt &
+# sleep 10
 
 
-echo "Starting iperf3 test"
-/mnt/shared/iperf-test.sh
-sleep 20
-killall ss
+echo "Starting iperf2 test"
+/mnt/shared/iperf-test.sh | grep  0.0000- > /mnt/shared/logs/iperf-log-$timestamp-age.txt
+# sleep 10
+# killall ss
 
 
 echo "Test finished"

@@ -10,7 +10,7 @@ table inet prioritize {
 		flags interval
 		# two ranges with a fixed threshold
 		elements = {
-			0-4096 : 8001:6,
+			0-16384 : 8001:6,
 			* : 8001:0,
 		}
 		# pfifo_fast uses the same classification than prio
