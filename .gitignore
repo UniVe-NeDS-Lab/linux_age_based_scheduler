@@ -1,0 +1,5 @@
+virtlab/img/*.iso
+virtlab/img/*.img
+virtlab/img/*.qcow2
+
+mount/logs/*.txt
