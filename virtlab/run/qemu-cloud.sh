@@ -29,7 +29,7 @@ IMG=virtlab/img/debian-12-generic-amd64.qcow2
 
 # run the VM
 exec qemu-system-x86_64 \
-    -m 4G --enable-kvm -cpu host -machine accel=kvm -snapshot -nographic \
+    -m 4G --enable-kvm -cpu host -machine accel=kvm -smp 4 -snapshot -nographic \
     -drive file=$IMG,index=0,format=qcow2,media=disk \
     -drive file=virtlab/img/seed-$1.iso,index=1,media=cdrom \
     -netdev user,id=external,hostfwd=tcp::$SSHPORT-:22,hostfwd=tcp::$FGPORT-:5999 -device virtio-net-pci,netdev=external \
