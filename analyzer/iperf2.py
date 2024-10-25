@@ -58,10 +58,15 @@ if __name__ == '__main__':
     table = make_row(['date', 'flowsize', *zip(repeat(None), allkinds)])
     table += make_row([None, 'KiB'] + ['nflows', 'mean_bw_mbps'] * len(allkinds))
     for date, test in tests.items():
-        allsizes = {s for r in test.values() for s in r.keys()}
-        for s in sorted(allsizes):
-            table += make_row([date, int(s/1024)]
-                              + [(len(test[k][s]), mean(test[k][s])/10**6) if k in test else (None, None)
-                                 for k in allkinds])
+        allsizes = {size for result in test.values() for size in result.keys()}
+        if allsizes:
+            table += '\n'
+        for size in sorted(allsizes):
+            table += make_row(
+                [date, int(size/1024)] +
+                [(len(test[k][size]), mean(test[k][size])/10**6)
+                    if k in test
+                    else (None, None)
+                    for k in allkinds])
 
     print(table)
