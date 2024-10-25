@@ -24,3 +24,9 @@ iface ens4 inet static
         address 192.168.42.1/24
         address 192.168.42.2/24
 ```
+
+To limit bandwith, can do this on the host:
+```
+sudo tc qdisc add dev tap0 root tbf rate 100mbit latency 50ms burst 1540
+sudo tc qdisc add dev tap1 root tbf rate 100mbit latency 50ms burst 1540
+```
