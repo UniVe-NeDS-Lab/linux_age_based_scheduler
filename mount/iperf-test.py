@@ -1,72 +1,51 @@
 #!/usr/bin/python3
 
-from queue import SimpleQueue
+import asyncio
 from random import Random
-import subprocess as sp
-from threading import Event, Thread
-from time import sleep
 
 
 server_address = 'server'
 server_port = '5001'
 duration = 480
 
-q = SimpleQueue()
-stop = Event()
-
 # sleep_secs = 0.2
 # large_flow_prob = 0.001
 
-def loop(flowsize, sleepsecs):
+
+async def loop(flowsize, sleepsecs, stop):
     r = Random()
+    res = []
     while not stop.is_set():
-        sleep(r.expovariate(1/sleepsecs))
-        res = iperf(flowsize)
-        q.put(res)
+        await asyncio.sleep(r.expovariate(1/sleepsecs))
+        res.append(await iperf(flowsize))
 
-# def loop():
-#     r = Random()
-#     while not stop.is_set():
-#         sleep(r.expovariate(1/sleep_secs))
-
-#         if r.random() < large_flow_prob:
-#             res = iperf('100M')
-#         else:   
-#             res = iperf('30K')
-
-#         q.put(res)
+    return res
 
 
+async def iperf(flowsize):
+    p = await asyncio.create_subprocess_exec(
+        'iperf', '-c', server_address, '-p', server_port, '-f', 'b', '-n', flowsize, '--nodelay',
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
-def iperf(flowsize):
-    r = sp.run(['iperf', '-c', server_address, '-p', server_port, '-f', 'b', '-n', flowsize, '--nodelay'], 
-               check=True, capture_output=True)
-    return r.stdout.splitlines()[-1].decode()
+    stdout, _ = await p.communicate()
 
+    return stdout.splitlines()[-1].decode()
+
+
+async def main():
+    stop_event = asyncio.Event()
+
+    tasks = [asyncio.create_task(loop('100M', 2, stop_event)) for _ in range(5)]
+    await asyncio.sleep(2)
+    tasks += [asyncio.create_task(loop('30K', 0.2, stop_event)) for _ in range(60)]
+
+    await asyncio.sleep(duration)
+    stop_event.set()
+
+    res, _ = await asyncio.wait(tasks)
+
+    print('\n'.join(l for r in res for l in r.result()))
 
 
 if __name__ == '__main__':
-    q = SimpleQueue()
-
-    threads = ([Thread(target=loop, args=('100M', 1)) for _ in range(5)] + 
-               [Thread(target=loop, args=('30K', 0.2)) for _ in range(60)])
-    # threads = [Thread(target=loop) for _ in range(20)]
-    
-    for t in threads:
-        t.start()
-        sleep(1)
-
-    sleep(duration)
-    stop.set()
-
-    for t in threads:
-        t.join()
-
-    while not q.empty():
-        r = q.get_nowait()
-        print(r)
-    # with open(os.argv[1], 'w') as f:
-
-
-    
-    
+    asyncio.run(main())
