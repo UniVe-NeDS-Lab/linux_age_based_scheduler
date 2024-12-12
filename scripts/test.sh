@@ -3,52 +3,80 @@ set -e
 trap "exit" INT TERM
 trap "kill 0" EXIT
 
-ssh="sshpass -p password ssh -oStrictHostKeyChecking=no debian@server"
+if [ -z "$1" ] 
+then
+    logdir=logs
+else
+    logdir=$1
+fi
+mkdir -p $logdir
 
+iface=enp0s31f6
 timestamp=$(date +%s)
 echo "Starting test at $timestamp"
 
-echo "Resetting the network to codel"
-nft delete table inet prioritize || true
-# $ssh sudo nft delete table inet prioritize || true
-tc qdisc del root dev ens4 || true
-# $ssh sudo tc qdisc del root dev ens4 || true
+echo "Resetting interface to default fq_codel"
+nft delete table inet prioritize 2>/dev/null || true
+tc qdisc del root dev $iface 2>/dev/null || true
 sleep 1
 
 echo "Starting iperf2 test"
-/mnt/shared/iperf-test.py > /mnt/shared/logs/iperf-log-$timestamp-codel.txt
+./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-fqcodel.txt
 echo "Test finished"
-tc -s qdisc show dev ens4
+tc -s qdisc show dev $iface
 sleep 2
 
-
-echo "Enabling pfifo_fast"
-
-tc qdisc add dev ens4 root handle 1: prio bands 3
-tc qdisc add dev ens4 parent 1:1 handle 10: codel
-tc qdisc add dev ens4 parent 1:2 handle 20: codel
-tc qdisc add dev ens4 parent 1:3 handle 30: codel
-
+echo "Enabling codel"
+tc qdisc add dev $iface root handle 1: codel
 sleep 1
 
 echo "Starting iperf2 test"
-/mnt/shared/iperf-test.py > /mnt/shared/logs/iperf-log-$timestamp-pfifo.txt
+./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-codel.txt
 echo "Test finished"
-tc -s qdisc show dev ens4
+tc -s qdisc show dev $iface
 sleep 2
 
 
 echo "Enabling age based prioritization"
-nft -f /mnt/shared/rulesets/prioritize.nft
+tc qdisc del root dev $iface
+tc qdisc add dev $iface root handle 1: prio bands 3
+tc qdisc add dev $iface parent 1:1 handle 10: codel
+tc qdisc add dev $iface parent 1:2 handle 20: codel
+tc qdisc add dev $iface parent 1:3 handle 30: codel
+nft -f ./rulesets/prioritize.nft
 sleep 1
 
 echo "Starting iperf2 test"
-/mnt/shared/iperf-test.py > /mnt/shared/logs/iperf-log-$timestamp-age.txt
+./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-age.txt
 echo "Test finished"
-tc -s qdisc show dev ens4
+tc -s qdisc show dev $iface
+
+
+echo "Enabling pfifo"
+tc qdisc del root dev $iface
+tc qdisc add dev $iface root handle 1: pfifo
+nft -f ./rulesets/prioritize-pfifo.nft
+sleep 1
+
+echo "Starting iperf2 test"
+./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-pfifo.txt
+echo "Test finished"
+tc -s qdisc show dev $iface
+
+
+echo "Enabling pfifo_fast"
+tc qdisc del root dev $iface
+tc qdisc add dev $iface root handle 1: pfifo_fast
+nft -f ./rulesets/prioritize-pfifo.nft
+sleep 1
+
+echo "Starting iperf2 test"
+./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-pfifofast.txt
+echo "Test finished"
+tc -s qdisc show dev $iface
 
 
 echo "Resetting the network"
 nft delete table inet prioritize
-tc qdisc del root dev ens4
+tc qdisc del root dev $iface
 

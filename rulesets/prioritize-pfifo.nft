@@ -1,0 +1,27 @@
+table inet prioritize {}
+delete table inet prioritize
+
+table inet prioritize {
+	map multiqueue {
+		# types of the data in the map, from bytes measured by conntrack
+		# to priority levels
+		typeof ct bytes : meta priority
+		# map supports interval ranges
+		flags interval
+		# two ranges with a fixed threshold
+		elements = {
+			0-65536 : 1:6,
+			* : 1:0,
+		}
+	}
+
+	chain y {
+
+		type filter hook output priority 0; policy accept;
+		# set the priority in the metadata of the packet
+		# based on the data extracted from ct bytes, and mapped in
+		# in the map we defined before
+		meta priority set ct bytes map @multiqueue
+	}
+}
+

@@ -2,42 +2,49 @@
 
 import asyncio
 from random import Random
+import sys
 
 
 server_address = 'server'
 server_port = '5001'
 duration = 480
 
-# sleep_secs = 0.2
-# large_flow_prob = 0.001
 
-
-async def loop(flowsize, sleepsecs, stop):
+async def loop(flowsize, sleepsecs, stop, udp=False):
     r = Random()
     res = []
     while not stop.is_set():
         await asyncio.sleep(r.expovariate(1/sleepsecs))
-        res.append(await iperf(flowsize))
+        out = await iperf(flowsize, udp=udp)
+        if out.startswith('[  1] 0.0000-'):
+            res.append(out)
+        else:
+            print(out, file=sys.stderr)
 
     return res
 
 
-async def iperf(flowsize):
+async def iperf(flowsize, nodelay=True, udp=False):
+    args = []
+    if nodelay:
+        args += ['--nodelay']
+    if udp:
+        args += ['--udp', '-b', '100M']
+
     p = await asyncio.create_subprocess_exec(
-        'iperf', '-c', server_address, '-p', server_port, '-f', 'b', '-n', flowsize, '--nodelay',
+        'iperf', '-c', server_address, '-p', server_port, '-f', 'b', '-n', flowsize, *args,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
     stdout, _ = await p.communicate()
-
     return stdout.splitlines()[-1].decode()
 
 
 async def main():
     stop_event = asyncio.Event()
 
-    tasks = [asyncio.create_task(loop('100M', 2, stop_event)) for _ in range(5)]
+    tasks = [asyncio.create_task(loop('1G', 2, stop_event)) for _ in range(5)]
     await asyncio.sleep(2)
-    tasks += [asyncio.create_task(loop('30K', 0.2, stop_event)) for _ in range(60)]
+    tasks += [asyncio.create_task(loop('30K', 1, stop_event)) for _ in range(10)]
 
     await asyncio.sleep(duration)
     stop_event.set()

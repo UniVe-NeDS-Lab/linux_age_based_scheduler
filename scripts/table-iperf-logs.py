@@ -1,7 +1,9 @@
+#!/usr/bin/python3
+
 from collections import defaultdict
 from itertools import repeat
 import re
-from statistics import mean, median
+from statistics import mean, median, stdev
 import sys
 
 
@@ -53,7 +55,7 @@ if __name__ == '__main__':
             other.append(r)
 
     # allkinds = {k for kinds in tests.values() for k in kinds.keys()}
-    allkinds = ['codel', 'pfifo', 'age']
+    allkinds = ['fqcodel', 'codel', 'age', 'pfifo', 'pfifofast']
 
     table = make_row(['date', 'flowsize', *zip(repeat(None), allkinds)])
     table += make_row([None, 'KiB'] + ['nflows', 'mean_bw_mbps'] * len(allkinds))
