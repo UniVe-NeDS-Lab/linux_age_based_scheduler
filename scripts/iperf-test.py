@@ -42,9 +42,15 @@ async def iperf(flowsize, nodelay=True, udp=False):
 async def main():
     stop_event = asyncio.Event()
 
-    tasks = [asyncio.create_task(loop('1G', 2, stop_event)) for _ in range(5)]
-    await asyncio.sleep(2)
-    tasks += [asyncio.create_task(loop('30K', 1, stop_event)) for _ in range(10)]
+    # tasks = [asyncio.create_task(loop('1G', 2, stop_event)) for _ in range(5)]
+    # await asyncio.sleep(2)
+    # tasks += [asyncio.create_task(loop('300K', 1, stop_event)) for _ in range(30)]
+
+    tasks = [asyncio.create_task(loop('300M', 1, stop_event)) for _ in range(5)]
+    await asyncio.sleep(10)
+    tasks += [asyncio.create_task(loop('3M', 1, stop_event)) for _ in range(10)]
+    tasks += [asyncio.create_task(loop('300K', 1, stop_event)) for _ in range(15)]
+    tasks += [asyncio.create_task(loop('30K', 1, stop_event)) for _ in range(30)]
 
     await asyncio.sleep(duration)
     stop_event.set()

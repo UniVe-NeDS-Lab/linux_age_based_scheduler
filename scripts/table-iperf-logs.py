@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from collections import defaultdict
-from itertools import repeat
+from itertools import count, repeat
 import re
 from statistics import mean, median, stdev
 import sys
@@ -25,6 +25,14 @@ def load_log_file(log_file_path):
 split = 16 * 1024
 testname_match = re.compile(r'.*-(\d+)-([a-z]+).txt')
 cw = 14
+
+byte_units = ['B  ', 'KiB', 'MiB', 'GiB', 'TiB']
+
+
+def prettyprint_bytes(n: int | float) -> str:
+    for i in count():
+        if n < 2**(i*10):
+            return f'{int(n/2**(i*10-10))} {byte_units[i-1]}'
 
 
 def make_row(iter):
@@ -58,14 +66,14 @@ if __name__ == '__main__':
     allkinds = ['fqcodel', 'codel', 'age', 'pfifo', 'pfifofast']
 
     table = make_row(['date', 'flowsize', *zip(repeat(None), allkinds)])
-    table += make_row([None, 'KiB'] + ['nflows', 'mean_bw_mbps'] * len(allkinds))
+    table += make_row([None, None] + ['nflows', 'mean_bw_mbps'] * len(allkinds))
     for date, test in tests.items():
         allsizes = {size for result in test.values() for size in result.keys()}
         if allsizes:
             table += '\n'
         for size in sorted(allsizes):
             table += make_row(
-                [date, int(size/1024)] +
+                [date, prettyprint_bytes(size)] +
                 [(len(test[k][size]), mean(test[k][size])/10**6)
                     if k in test
                     else (None, None)

@@ -10,7 +10,7 @@ table inet prioritize {
 		flags interval
 		# two ranges with a fixed threshold
 		elements = {
-			0-65536 : 1:6,
+			0-330000 : 1:6,
 			* : 1:0,
 		}
 	}
