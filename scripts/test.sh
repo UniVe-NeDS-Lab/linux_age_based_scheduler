@@ -21,7 +21,7 @@ tc qdisc del root dev $iface 2>/dev/null || true
 sleep 1
 
 echo "Starting iperf2 test"
-./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-fqcodel.txt
+./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-fqcodel.json.gz
 echo "Test finished"
 tc -s qdisc show dev $iface
 sleep 2
@@ -31,7 +31,7 @@ tc qdisc add dev $iface root handle 1: codel
 sleep 1
 
 echo "Starting iperf2 test"
-./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-codel.txt
+./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-codel.json.gz
 echo "Test finished"
 tc -s qdisc show dev $iface
 sleep 2
@@ -47,7 +47,7 @@ nft -f ./rulesets/prioritize.nft
 sleep 1
 
 echo "Starting iperf2 test"
-./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-age.txt
+./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-age.json.gz
 echo "Test finished"
 tc -s qdisc show dev $iface
 
@@ -59,7 +59,7 @@ nft -f ./rulesets/prioritize-pfifo.nft
 sleep 1
 
 echo "Starting iperf2 test"
-./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-pfifo.txt
+./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-pfifo.json.gz
 echo "Test finished"
 tc -s qdisc show dev $iface
 
@@ -71,7 +71,7 @@ nft -f ./rulesets/prioritize-pfifo.nft
 sleep 1
 
 echo "Starting iperf2 test"
-./scripts/iperf-test.py > $logdir/iperf-log-$timestamp-pfifofast.txt
+./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-pfifofast.json.gz
 echo "Test finished"
 tc -s qdisc show dev $iface
 

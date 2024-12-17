@@ -5,25 +5,15 @@ from itertools import count, repeat
 import re
 from statistics import mean, median, stdev
 import sys
+import json
+import gzip
 
 
 def load_log_file(log_file_path):
-    with open(log_file_path, 'r') as f:
-        for l in f:
-            try:
-                _, _, time, _, size, _, bandwidth, _ = l.split()
-            except ValueError:
-                continue
-
-            time = float(time.split('-')[1])
-            size = float(size)
-            bandwidth = float(bandwidth)
-
-            yield time, size, bandwidth
+    return json.load(gzip.open(log_file_path, 'rt'))['data']
 
 
-split = 16 * 1024
-testname_match = re.compile(r'.*-(\d+)-([a-z]+).txt')
+testname_match = re.compile(r'.*-(\d+)-([a-z]+)\..+')
 cw = 14
 
 byte_units = ['B  ', 'KiB', 'MiB', 'GiB', 'TiB']
@@ -53,13 +43,14 @@ if __name__ == '__main__':
 
     for arg in sys.argv[1:]:
         r = defaultdict(list)
-        for t, s, bw in load_log_file(arg):
-            if bw > 0:
-                r[s].append(8*s/bw)
+        for l in load_log_file(arg):
+            size, throughput = l['size'], l['throughput']
+            time = 8*size/throughput
+            r[size].append(time)
 
         if match := testname_match.match(arg):
-            date, k = match.groups()
-            tests[int(date)][k] = r
+            date, kind = match.groups()
+            tests[int(date)][kind] = r
         else:
             other.append(r)
 
@@ -70,12 +61,11 @@ if __name__ == '__main__':
     table += make_row([None, None] + ['nflows', 'mean_time_s'] * len(allkinds))
     for date, test in tests.items():
         allsizes = {size for result in test.values() for size in result.keys()}
-        if allsizes:
-            table += '\n'
+        table += '\n'
         for size in sorted(allsizes):
             table += make_row(
                 [date, prettyprint_bytes(size)] +
-                [(len(test[k][size]), mean(test[k][size]))
+                [(len(test[k][size]), mean(test[k][size]) if len(test[k][size]) > 0 else None)
                     if k in test
                     else (None, None)
                     for k in allkinds])
