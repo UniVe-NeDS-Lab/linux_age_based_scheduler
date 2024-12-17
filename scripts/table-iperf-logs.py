@@ -54,7 +54,8 @@ if __name__ == '__main__':
     for arg in sys.argv[1:]:
         r = defaultdict(list)
         for t, s, bw in load_log_file(arg):
-            r[s].append(bw)
+            if bw > 0:
+                r[s].append(8*s/bw)
 
         if match := testname_match.match(arg):
             date, k = match.groups()
@@ -66,7 +67,7 @@ if __name__ == '__main__':
     allkinds = ['fqcodel', 'codel', 'age', 'pfifo', 'pfifofast']
 
     table = make_row(['date', 'flowsize', *zip(repeat(None), allkinds)])
-    table += make_row([None, None] + ['nflows', 'mean_bw_mbps'] * len(allkinds))
+    table += make_row([None, None] + ['nflows', 'mean_time_s'] * len(allkinds))
     for date, test in tests.items():
         allsizes = {size for result in test.values() for size in result.keys()}
         if allsizes:
@@ -74,7 +75,7 @@ if __name__ == '__main__':
         for size in sorted(allsizes):
             table += make_row(
                 [date, prettyprint_bytes(size)] +
-                [(len(test[k][size]), mean(test[k][size])/10**6)
+                [(len(test[k][size]), mean(test[k][size]))
                     if k in test
                     else (None, None)
                     for k in allkinds])
