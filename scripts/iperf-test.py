@@ -1,16 +1,20 @@
 #!/usr/bin/python3
 
 import asyncio
-from random import Random
-import sys
 import json
-import gzip
-
+import sys
+from collections import namedtuple
+from random import Random
+from time import time
 
 server_address = 'server'
 server_port = '5001'
-duration = 480
 
+spinup_duration = 10
+test_duration = 960
+actor_count = 80
+
+sleepsecs = 0.25
 flow_cumprobs = [
     (.002, '300M'),
     (.03, '3M',),
@@ -18,13 +22,20 @@ flow_cumprobs = [
     (1, '30K'),
 ]
 
+flow_output = namedtuple('flow_output', ['time', 'output'])
+flow_data = namedtuple('flow_data', ['time', 'size', 'throughput', 'start_at'])
+
 
 def random_flowsize(r: Random) -> str:
-    n = r.uniform(0,1)
+    n = r.uniform(0, 1)
     for p, f in flow_cumprobs:
         if n <= p:
             return f
-    
+
+
+def random_sleeptime(r: Random) -> float:
+    return r.expovariate(1 / sleepsecs)
+
 
 def parse_iperf_output(output: bytes):
     for line in output.decode().splitlines()[::-1]:
@@ -41,13 +52,19 @@ def parse_iperf_output(output: bytes):
             return time, int(size), int(bandwidth)
 
 
-async def loop(sleepsecs, stop, udp=False):
+async def loop(start, stop, udp=False):
     r = Random()
     outputs = []
     while not stop.is_set():
-        await asyncio.sleep(r.expovariate(1/sleepsecs))
+        should_record = start.is_set()
+
+        await asyncio.sleep(random_sleeptime(r))
+        start_time = time()
         output = await iperf(random_flowsize(r), udp=udp)
-        outputs.append(output)
+
+        if should_record:
+            outputs.append(flow_output(start_time, output))
+
     return outputs
 
 
@@ -67,11 +84,16 @@ async def iperf(flowsize, nodelay=True, udp=False):
 
 
 async def main():
+    start_event = asyncio.Event()
     stop_event = asyncio.Event()
 
-    tasks = [asyncio.create_task(loop(0.2, stop_event)) for _ in range(80)]
+    tasks = [asyncio.create_task(loop(start_event, stop_event)) for _ in range(actor_count)]
 
-    await asyncio.sleep(duration)
+    await asyncio.sleep(spinup_duration)
+    start_event.set()
+
+    test_start_time = time()
+    await asyncio.sleep(test_duration)
     stop_event.set()
 
     res, _ = await asyncio.wait(tasks)
@@ -79,16 +101,32 @@ async def main():
     data = []
     errors = 0
     for r in res:
-        for o in r.result():
+        for start_time, output in r.result():
             try:
-                t, s, bw = parse_iperf_output(o)
-                data.append({'time': t, 'size': s, 'throughput': bw})
+                t, s, bw = parse_iperf_output(output)
+                data.append({'time': t, 'size': s, 'throughput': bw, 'start_at': start_time - test_start_time})
             except TypeError:
                 errors += 1
 
     if errors:
         print(f'Errors: {errors}', file=sys.stderr)
-    print(json.dumps({'data': data, 'errors': errors}))
+
+    print(
+        json.dumps(
+            {
+                'data': data,
+                'errors': errors,
+                'metadata': {
+                    'test_start': test_start_time,
+                    'test_duration': test_duration,
+                    'spinup_duration': spinup_duration,
+                    'actor_count': actor_count,
+                    'flow_cumprobs': flow_cumprobs,
+                    'sleepsecs': sleepsecs,
+                },
+            }
+        )
+    )
 
 
 if __name__ == '__main__':

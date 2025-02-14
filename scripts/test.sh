@@ -3,80 +3,54 @@ set -e
 trap "exit" INT TERM
 trap "kill 0" EXIT
 
-if [ -z "$1" ] 
+if [[ -z "$1" ]]
 then
-    logdir=logs
-else
-    logdir=$1
+    echo "Usage: $0 <logdir>"
+    exit 1
 fi
-mkdir -p $logdir
 
+sshhost=sv-lab-client
 iface=enp0s31f6
 timestamp=$(date +%s)
-echo "Starting test at $timestamp"
+dir=$(ssh $sshhost mktemp -d /tmp/iperftest.XXXX)
 
-echo "Resetting interface to default fq_codel"
-nft delete table inet prioritize 2>/dev/null || true
-tc qdisc del root dev $iface 2>/dev/null || true
-sleep 1
+echo "Starting test at $timestamp - using directory $dir"
 
-echo "Starting iperf2 test"
-./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-fqcodel.json.gz
-echo "Test finished"
-tc -s qdisc show dev $iface
-sleep 2
+echo "Push scripts to the client"
+ssh -q $sshhost "mkdir -p $dir $dir/logs"
+scp -r scripts/ $sshhost:$dir/scripts
+scp -r rulesets/ $sshhost:$dir/rulesets
 
-echo "Enabling codel"
-tc qdisc add dev $iface root handle 1: codel
-sleep 1
+run-test () {
+    sleep 2
+    echo "Starting iperf2 test - $1"
+    ssh $sshhost "$dir/scripts/setup-tc.sh $1 $iface"  # setup tc and nftables
+    sleep 1
+    ssh $sshhost "$dir/scripts/iperf-test.py | gzip > $dir/logs/iperf-log-$timestamp-$1.json.gz"  # run iperf test
+    ssh $sshhost "sudo tc -s qdisc show dev $iface"  # show qdisc stats
+}
 
-echo "Starting iperf2 test"
-./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-codel.json.gz
-echo "Test finished"
-tc -s qdisc show dev $iface
-sleep 2
+# ensure interface is clean
+ssh $sshhost "$dir/scripts/setup-tc.sh reset $iface 2>/dev/null || true"
+ssh $sshhost "sudo nft delete table inet prioritize 2>/dev/null || true"
 
+# run tests
 
-echo "Enabling age based prioritization"
-tc qdisc del root dev $iface
-tc qdisc add dev $iface root handle 1: prio bands 3
-tc qdisc add dev $iface parent 1:1 handle 10: codel
-tc qdisc add dev $iface parent 1:2 handle 20: codel
-tc qdisc add dev $iface parent 1:3 handle 30: codel
-nft -f ./rulesets/prioritize.nft
-sleep 1
+run-test fqcodel
+run-test codel
+run-test pfifo
 
-echo "Starting iperf2 test"
-./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-age.json.gz
-echo "Test finished"
-tc -s qdisc show dev $iface
+ssh $sshhost "sudo nft -f $dir/rulesets/prioritize.nft"
+run-test age  # age + prio codel
+
+ssh $sshhost "sudo nft -f $dir/rulesets/prioritize-pfifo.nft"
+run-test pfifofast  # age + pfifo_fast
 
 
-echo "Enabling pfifo"
-tc qdisc del root dev $iface
-tc qdisc add dev $iface root handle 1: pfifo
-nft -f ./rulesets/prioritize-pfifo.nft
-sleep 1
-
-echo "Starting iperf2 test"
-./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-pfifo.json.gz
-echo "Test finished"
-tc -s qdisc show dev $iface
+# reset interface
+ssh $sshhost "$dir/scripts/setup-tc.sh reset $iface"
+ssh $sshhost "sudo nft delete table inet prioritize"
 
 
-echo "Enabling pfifo_fast"
-tc qdisc del root dev $iface
-tc qdisc add dev $iface root handle 1: pfifo_fast
-nft -f ./rulesets/prioritize-pfifo.nft
-sleep 1
-
-echo "Starting iperf2 test"
-./scripts/iperf-test.py | gzip > $logdir/iperf-log-$timestamp-pfifofast.json.gz
-echo "Test finished"
-tc -s qdisc show dev $iface
-
-
-echo "Resetting the network"
-nft delete table inet prioritize
-tc qdisc del root dev $iface
-
+echo "Downloading logs"
+scp $sshhost:$dir/logs/* ./logs/$1
