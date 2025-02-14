@@ -1,0 +1,26 @@
+[project]
+name = "linux-age-based-scheduler"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = ["ipykernel>=6.29.5", "matplotlib>=3.10.0", "numpy>=2.2.2", "orjson>=3.10.15", "pandas>=2.2.3"]
+
+[tool.ruff]
+line-length = 140
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # Pyflakes
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "I",   # isort
+]
+ignore = ["B905"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[dependency-groups]
+dev = ["nbstripout>=0.8.1"]
