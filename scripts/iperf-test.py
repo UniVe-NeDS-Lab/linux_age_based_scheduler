@@ -12,18 +12,19 @@ server_port = '5001'
 
 spinup_duration = 10
 test_duration = 960
-actor_count = 80
+actor_count = 100
 
-sleepsecs = 0.25
-flow_cumprobs = [
-    (.002, '300M'),
-    (.03, '3M',),
-    (.26, '300K'),
-    (1, '30K'),
+sleepsecs = 0.2
+flow_weights = [
+    # (10000, '30K'),
+    (1000, '300K'),
+    (100, '3M'),
+    (1, '300M'),
 ]
 
+flow_cumprobs = [(sum(w for w, _ in flow_weights[: i + 1]) / sum(w for w, _ in flow_weights), f) for i, (_, f) in enumerate(flow_weights)]
+
 flow_output = namedtuple('flow_output', ['time', 'output'])
-flow_data = namedtuple('flow_data', ['time', 'size', 'throughput', 'start_at'])
 
 
 def random_flowsize(r: Random) -> str:
