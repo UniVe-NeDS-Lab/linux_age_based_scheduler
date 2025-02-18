@@ -23,7 +23,7 @@ scp -r rulesets/ $sshhost:$dir/rulesets
 
 run-test () {
     sleep 2
-    echo "Starting iperf2 test - $1"
+    echo " - Starting iperf2 test - $1"
     ssh $sshhost "$dir/scripts/setup-tc.sh $1 $iface"  # setup tc and nftables
     sleep 1
     ssh $sshhost "$dir/scripts/iperf-test.py | gzip > $dir/logs/iperf-log-$timestamp-$1.json.gz"  # run iperf test
