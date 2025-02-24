@@ -43,4 +43,4 @@ def prettyprint_bytes(n: int | float) -> str:
     byte_units = ['B  ', 'KiB', 'MiB', 'GiB', 'TiB']
     for i in count():
         if n < 2 ** (i * 10):
-            return f'{int(n / 2 ** (i * 10 - 10))} {byte_units[i - 1]}'
+            return f'{n / 2 ** (i * 10 - 10):.3g} {byte_units[i - 1]}'

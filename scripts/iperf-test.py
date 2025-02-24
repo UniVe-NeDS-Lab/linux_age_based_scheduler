@@ -11,14 +11,15 @@ server_address = 'server'
 server_port = '5001'
 
 spinup_duration = 10
-test_duration = 960
-actor_count = 100
+test_duration = 1200
+actor_count = 80
 
-sleepsecs = 0.2
+sleepsecs = 1
 flow_weights = [
-    # (10000, '30K'),
     (1000, '300K'),
-    (100, '3M'),
+    (178, '1.7M'),
+    (31.6, '9.5M'),
+    (5.62, '53M'),
     (1, '300M'),
 ]
 
