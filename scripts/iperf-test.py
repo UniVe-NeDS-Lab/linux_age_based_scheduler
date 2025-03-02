@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import sys
 from collections import namedtuple
 from random import Random
@@ -20,7 +21,7 @@ flow_weights = [
     (178, '1.7M'),
     (31.6, '9.5M'),
     (5.62, '53M'),
-    (1, '300M'),
+    (0.5, '600M'),
 ]
 
 flow_cumprobs = [(sum(w for w, _ in flow_weights[: i + 1]) / sum(w for w, _ in flow_weights), f) for i, (_, f) in enumerate(flow_weights)]
@@ -28,9 +29,8 @@ flow_cumprobs = [(sum(w for w, _ in flow_weights[: i + 1]) / sum(w for w, _ in f
 iface_name = 'enp0s31f6'
 iface_metrics = ['tx_packets', 'tx_bytes']
 
-
-flow_output = namedtuple('flow_output', ['time', 'output'])
-stats_output = namedtuple('stats_output', ['time', 'values'])
+flow_output = namedtuple('flow_output', [('time', float), ('output', bytes)])
+stats_output = namedtuple('stats_output', [('time', float), ('values', list[int])])
 
 
 def random_flowsize(r: Random) -> str:
@@ -59,9 +59,9 @@ def parse_iperf_output(output: bytes):
             return time, int(size), int(bandwidth)
 
 
-async def loop(start, stop, udp=False):
-    r = Random()
-    outputs = []
+async def loop(seed, start, stop, udp=False):
+    r = Random(seed)
+    outputs: list[flow_output] = []
     while not stop.is_set():
         should_record = start.is_set()
 
@@ -91,17 +91,19 @@ async def iperf(flowsize, nodelay=True, udp=False):
 
 
 async def record_iface_stats(stop):
-    stats = []
+    stats: list[stats_output] = []
     loop = asyncio.get_running_loop()
     while not stop.is_set():
         await asyncio.sleep(0.1)
         stat_time = time()
-        stat_values, _ = await asyncio.wait([loop.run_in_executor(None, get_iface_stat, iface_name, metric_name) for metric_name in iface_metrics])
+        stat_values, _ = await asyncio.wait(
+            [loop.run_in_executor(None, get_iface_stat, iface_name, metric_name) for metric_name in iface_metrics]
+        )
         stats.append(stats_output(stat_time, [res.result() for res in stat_values]))
     return stats
 
 
-def get_iface_stat(iface: str, metric: str) -> int:
+def get_iface_stat(iface: str, metric: str):
     with open(f'/sys/class/net/{iface}/statistics/{metric}') as f:
         return int(f.read())
 
@@ -110,7 +112,8 @@ async def main():
     start_event = asyncio.Event()
     stop_event = asyncio.Event()
 
-    tasks = [asyncio.create_task(loop(start_event, stop_event)) for _ in range(actor_count)]
+    seed = os.getenv('SEED')
+    tasks = [asyncio.create_task(loop(seed and int(seed) + i, start_event, stop_event)) for i in range(actor_count)]
     stats_task = asyncio.create_task(record_iface_stats(stop_event))
 
     await asyncio.sleep(spinup_duration)
@@ -127,17 +130,17 @@ async def main():
     res, _ = await asyncio.wait(tasks)
 
     data = []
-    errors = 0
+    errors = []
     for r in res:
         for start_time, output in r.result():
             try:
                 t, s, bw = parse_iperf_output(output)
                 data.append({'time': t, 'size': s, 'throughput': bw, 'start_at': start_time - test_start_time})
             except TypeError:
-                errors += 1
+                errors.append({'time': start_time - test_start_time, 'output': output.decode()})
 
     if errors:
-        print(f'Errors: {errors}', file=sys.stderr)
+        print(f'Errors: {len(errors)}', file=sys.stderr)
 
     print(
         json.dumps(
@@ -152,6 +155,7 @@ async def main():
                     'actor_count': actor_count,
                     'flow_cumprobs': flow_cumprobs,
                     'sleepsecs': sleepsecs,
+                    'seed': seed,
                 },
             }
         )
