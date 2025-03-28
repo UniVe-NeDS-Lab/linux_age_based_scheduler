@@ -12,7 +12,7 @@ server_address = 'server'
 server_port = '5001'
 
 spinup_duration = 10
-test_duration = 1200
+test_duration = 60 * 60 * 12 # 12 hours
 actor_count = 80
 
 sleepsecs = 1
@@ -29,8 +29,8 @@ flow_cumprobs = [(sum(w for w, _ in flow_weights[: i + 1]) / sum(w for w, _ in f
 iface_name = 'enp0s31f6'
 iface_metrics = ['tx_packets', 'tx_bytes']
 
-flow_output = namedtuple('flow_output', [('time', float), ('output', bytes)])
-stats_output = namedtuple('stats_output', [('time', float), ('values', list[int])])
+flow_output = namedtuple('flow_output', ['time', 'output'])
+stats_output = namedtuple('stats_output', ['time', 'values'])
 
 
 def random_flowsize(r: Random) -> str:

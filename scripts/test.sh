@@ -10,6 +10,7 @@ then
 fi
 
 sshhost=sv-lab-client
+sshhostsrv=sv-lab-server
 iface=enp0s31f6
 timestamp=$(date +%s)
 dir=$(ssh $sshhost mktemp -d /tmp/iperftest.XXXX)
@@ -35,6 +36,10 @@ run-test () {
 # ensure interface is clean
 ssh $sshhost "$dir/scripts/setup-tc.sh reset $iface 2>/dev/null || true"
 ssh $sshhost "sudo nft delete table inet prioritize 2>/dev/null || true"
+
+# disable offloading
+ssh $sshhost "sudo ethtool -K $iface rx off tx off sg off tso off gso off gro off rxvlan off txvlan off"
+ssh $sshhostsrv "sudo ethtool -K $iface rx off tx off sg off tso off gso off gro off rxvlan off txvlan off"
 
 # run tests
 
