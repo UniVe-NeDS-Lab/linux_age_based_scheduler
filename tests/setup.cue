@@ -39,10 +39,12 @@ _offloads: "rx off tx off sg off tso off gso off gro off rxvlan off txvlan off"
 
 _sshNode: {
 	ID:       string & !=""
+	_index:   int
 	Platform: _platform
 	Launcher: SSH: {
 		Root: false
-		Destination: "sv-lab-\(ID)"
+		Destination: "lab-agesched0\(_index)"
+		// Destination: "sv-lab-\(ID)"
 	}
 }
 
@@ -68,22 +70,28 @@ _nodes: {
 
 	client: {
 		post: [...string]
-		node:  _sshNode & {ID: "client"}
-		iface: "enp0s31f6"
+		// node:  _sshNode & {ID: "client"}
+		// iface: "enp0s31f6"
+		node:  _sshNode & {ID: "client", _index: 1}
+		iface: "enp1s0f0"
 		setup: list.Concat([
 			[
 				"sysctl -w net.ipv6.conf.all.disable_ipv6=1",
 				"ethtool -K \(iface) \(_offloads)",
-				"ping -c 3 -i 0.1 server",
 			],
 			post,
+			[
+				"ping -c 3 -i 0.1 server",
+			],
 		])
 	}
 
 	server: {
 		post: [...string]
-		node:  _sshNode & {ID: "server"}		
-		iface: "enp0s31f6"
+		// node:  _sshNode & {ID: "server"}
+		// iface: "enp0s31f6"
+		node:  _sshNode & {ID: "server", _index: 2}		
+		iface: "enp1s0f0"
 		setup: list.Concat([
 			[
 				"sysctl -w net.ipv6.conf.all.disable_ipv6=1",

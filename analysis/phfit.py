@@ -1,16 +1,16 @@
-import pathlib
+import os
 import subprocess
 import tempfile
 
 import numpy as np
 
-_CONTFIT_PATH = pathlib.Path('../PhFit/V1/classes/contfit').absolute()
+_CONTFIT_PATH = os.path.abspath('../PhFit/V1/classes/contfit')
 
 
-def _contfit_run(input_file: str | pathlib.Path, body: int, tail: int, **kwargs) -> subprocess.CompletedProcess:
+def _contfit_run(input_file: str, body: int, tail: int, **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(
         [
-            str(_CONTFIT_PATH),
+            _CONTFIT_PATH,
             '3',  # Fitting a distribution given by samples
             input_file,  # name of file describing the distribution
             '1',  # type of file: 1: empirical cdf
@@ -66,13 +66,13 @@ def contfit(x, cdf, body: int, tail: int):
     cdf_file_content = '\n'.join(f'{xi} {pi}' for xi, pi in zip(x, cdf) if 0 < pi < 1)
 
     with tempfile.TemporaryDirectory(prefix='phfit.') as tmpdir:
-        with open(f'{tmpdir}/cdf.txt', 'w') as file:
+        with open(os.path.join(tmpdir, 'cdf.txt'), 'w') as file:
             file.write(cdf_file_content)
 
         _contfit_run('cdf.txt', body=body, tail=tail, cwd=tmpdir)
 
-        with open(f'{tmpdir}/TEMPORARYPhFitFILE.matrix') as f:
-            matrix = f.read()
+        with open(os.path.join(tmpdir, 'TEMPORARYPhFitFILE.matrix')) as file:
+            matrix = file.read()
 
     a, b = _parse_contfit_matrix_output(matrix)
     return a, b

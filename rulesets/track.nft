@@ -1,9 +1,0 @@
-# table inet track {}
-# delete table inet track
-
-table inet track {
-    chain track {
-        type filter hook output priority 0; policy accept;
-        ct mark set meta mark
-    }
-}

@@ -2,7 +2,14 @@ package tests
 
 
 _nftprioritize: {
-    threshold: 55Mi
+    // threshold: 55Mi // from 5 class test
+    // threshold: 90475270 // size*pdf cumsum kneed
+    // threshold: 6332751 // phfit + optimize 2lps
+    // threshold: 13746699 // cdf kneed
+
+    threshold: 19500715 // 10 gbps
+    // threshold: 6331208 // 1 gbps
+
     table: "prioritize"
     _base: {
         mapping: string

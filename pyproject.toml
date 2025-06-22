@@ -3,7 +3,7 @@ name = "linux-age-based-scheduler"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
-dependencies = ["ipykernel", "kneed", "matplotlib", "numpy", "orjson", "pandas"]
+dependencies = ["ipykernel", "kneed", "matplotlib", "numpy", "orjson", "pandas", "pyqt5"]
 
 [tool.ruff]
 line-length = 140
